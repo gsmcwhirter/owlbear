@@ -1,7 +1,12 @@
-
+# -*- coding: utf-8 -*-
 from collections import defaultdict
 from datetime import datetime
 from typing import NamedTuple, Optional, Union
+
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 class Cookie(NamedTuple):
     name: str
@@ -144,3 +149,19 @@ class Response:
         self._headers_sent = True
         self._done = True
         await channel.send(resp)
+
+
+def html_response(content: str, status=200) -> Response:
+    resp = Response()
+    resp.status = status
+    resp.set_content(content)
+
+    return resp
+
+
+def json_response(content: dict, status=200) -> Response:
+    resp = Response()
+    resp.status = status
+    resp.set_content(json.dumps(content))
+
+    return resp

@@ -4,7 +4,7 @@ import re
 from typing import (
     Any, Callable, Coroutine, Iterable,
     List, Mapping, MutableMapping, Optional,
-    Tuple, Type, Union,
+    Tuple, Union,
 )
 
 from owlbear.request import Request
@@ -12,24 +12,28 @@ from owlbear.response import Response
 
 
 Methods = Iterable[str]
-RequestHandler = Callable[[Request], Coroutine[Response, None, None]]
-WrappedRequestHandler = Callable[[Request], Coroutine[Response, None, None]]
-Middleware = Callable[[Request, WrappedRequestHandler], Coroutine[Response, None, None]]
+RequestHandler = Callable[[Request], Coroutine[Response, None, Response]]
+WrappedRequestHandler = Callable[[Request], Coroutine[Response, None, Response]]
+Middleware = Callable[[Request, WrappedRequestHandler], Coroutine[Response, None, Response]]
 
 
 class BadRouteParameter(Exception):
+    """Represents invalid route parameters when adding a route"""
     pass
 
 
 class RouteNotFound(Exception):
+    """Represents a route not being there when finding a route"""
     pass
 
 
 class ParameterTypeError(Exception):
+    """Represents the data in a path not being valid for a route"""
     pass
 
 
 class ConflictingRoutes(Exception):
+    """Represents trying to add a route that is already added"""
     pass
 
 
@@ -38,9 +42,7 @@ _STAR_TYPES = {
     'str': str,
 }
 _URI_PARAMETER_RE = re.compile(
-    r"^{{([a-zA-Z_][a-zA-Z0-9_]*)(?::\s*({star_types}))?}}$".format(
-        star_types="|".join(_STAR_TYPES.keys())
-    )
+    r"^<([a-zA-Z_][a-zA-Z0-9_]*)?(?::\s*([^>]*))?>$"
 )
 
 
@@ -58,8 +60,8 @@ def _get_star_attrs(key: str,
     """
     matches = _URI_PARAMETER_RE.match(key)
     if matches:
-        star_name = matches.group(1)
-        if not star_name:
+        star_name = (matches.group(1) or '').strip()
+        if not star_name:  # pragma: no cover
             raise BadRouteParameter("Route parameter definition must have a non-empty name.")
 
         if star_name in parent_parameter_names:
@@ -110,15 +112,9 @@ def print_route_tree(route_tree: 'RouteTree', indent: str=""):
     for key, child in route_tree.children.items():
         print_route_tree(child, indent)
 
-# async def example_middleware(request: Request,
-#                              next_handler: WrappedRequestHandler) -> Response:
-#     # do sutff pre; can return here and next_handler won't run
-#     resp = await next_handler(request)
-#     # do stuff post; can return here and return value will override
-#     return resp
-
 
 class RouteTree:
+    """Manages the routes and methods in a tree-like manner"""
     prefix: str
     children: MutableMapping[str, 'RouteTree']
     methods: MutableMapping[str, RequestHandler]
@@ -248,7 +244,7 @@ class RouteTree:
         Returns:
 
         """
-        if self.star_type is None:
+        if self.star_type is None:  # pragma: no cover
             return None, None
 
         try:
@@ -281,7 +277,7 @@ class RouteTree:
         if key in self.children:
             try:
                 return self.children[key].get_handler_and_args(rest, method.upper(), handler_args=handler_args)
-            except RouteNotFound:
+            except RouteNotFound:  # pragma: no cover
                 pass
 
 
@@ -293,12 +289,20 @@ class RouteTree:
 
             try:
                 return self.children['*'].get_handler_and_args(rest, method, handler_args=handler_args)
-            except RouteNotFound:
+            except RouteNotFound:  # pragma: no cover
                 pass
 
         raise RouteNotFound(f"Could not find route for '{self.prefix.rstrip('/')}/{key}'")
 
-    def list_handlers(self, prefix=None):
+    def list_handlers(self, prefix: str=None) -> List[Tuple[str, str, RequestHandler]]:
+        """
+
+        Args:
+            prefix ():
+
+        Returns:
+
+        """
         if prefix is None:
             prefix = self.prefix.rsplit("/", 1)[0]
 
@@ -332,45 +336,9 @@ class RouteTree:
             uri_parts = _make_uri_parts(path)
             self.add_handler(uri_parts, handler, methods=(method, ))
 
-        # if routes.prefix == self.prefix:
-        #     print("other methods", routes.methods)
-        #     for method, reqhandler in routes.methods.items():
-        #         print("this", self.prefix, method, reqhandler)
-        #         if self.methods.get(method):
-        #             raise ConflictingRoutes(
-        #                 "Trying to merge route '{method} {path}' -> {handler} conflicts with existing handler {old_handler}".format(
-        #                     method=method,
-        #                     path=self.prefix,
-        #                     handler=reqhandler,
-        #                     old_handler=self.methods.get(method),
-        #                 ))
-        #
-        #         self.methods[method] = reqhandler
-        # else:
-        #     assert routes.prefix.startswith(self.prefix), (routes.prefix, self.prefix)
-        #
-        #     uri_parts = _make_uri_parts(routes.prefix[len(self.prefix) + 1:])
-        #     print("uri_parts", uri_parts)
-        #     key, *rest = uri_parts
-        #
-        #     if parent_parameter_names is None:
-        #         parent_parameter_names = []
-        #
-        #     if self.star_name is not None:
-        #         parent_parameter_names.append(self.star_name)
-        #
-        #     star_name, star_type = _get_star_attrs(key, parent_parameter_names)
-        #
-        #     if star_name:
-        #         key = '*'
-        #
-        #     if key not in self.children:
-        #         self._add_child(key, star_name, star_type)
-        #
-        #     self.children[key].merge_with(routes, parent_parameter_names=parent_parameter_names)
-
 
 class Router:
+    """The programmer-facing router"""
     __slots__ = ('tree', 'middleware',)
 
     def __init__(self):
