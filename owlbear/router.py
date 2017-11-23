@@ -1,4 +1,5 @@
-
+# -*- coding: utf-8 -*-
+"""Classes to handle request routing"""
 import functools
 import re
 from typing import (

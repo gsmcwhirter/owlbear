@@ -14,7 +14,12 @@ class MyApp(Owlbear):
     def __init__(self):
         super().__init__()
 
+        # could also do self.add_route(...)
+        # and self.register_middleware(...)
+        # here instead of using the decorators below
 
+
+# you need a global callable for uvicorn
 app = MyApp()
 
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+"""Helper functions for running tests"""
 import asyncio
 
 from uvicorn.protocols.http import HttpProtocol

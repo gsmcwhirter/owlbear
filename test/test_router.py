@@ -6,7 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from owlbear import router, test_helpers
+from owlbear import router
+import test.helpers as test_helpers
 
 
 MockRequest = namedtuple('MockRequest', ['path', 'method'])
@@ -91,7 +92,7 @@ def test_attach_router():
     for item in sub_router.tree.list_handlers():
         print(item)
 
-    my_router.attach(sub_router, "/foo")
+    my_router.attach(sub_router, "foo")
 
     handler, args = my_router.handler_and_args_for("/", "GET")
     assert handler is coro_mock_handler1

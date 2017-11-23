@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Classes to handle composing and sending an ASGI response"""
 from collections import defaultdict
 from datetime import datetime
 from typing import NamedTuple, Optional, Union
@@ -8,7 +9,9 @@ try:
 except ImportError:
     import json
 
+
 class Cookie(NamedTuple):
+    """Represents a cookie"""
     name: str
     value: str
     expires: Optional[datetime] = None
@@ -20,6 +23,7 @@ class Cookie(NamedTuple):
     same_site: Optional[str] = "Strict"
 
     def formatted(self) -> str:
+        """Return a properly formatted cookie string"""
         extras = []
         if self.expires is not None:
             extras.append("Expires={}")
@@ -56,10 +60,12 @@ class Cookie(NamedTuple):
 
 
 class ResponseError(Exception):
+    """Represents an error composing a response"""
     pass
 
 
 class Response:
+    """Interface to compose and send an ASGI response"""
 
     __slots__ = ('_headers', '_content', 'status', '_cookies', 'content_type', '_charset', '_headers_sent', '_done', )
 
@@ -109,16 +115,19 @@ class Response:
             'headers': headers
         }
 
-    def _form_content_response(self, content: bytes, done: bool=True) -> dict:
+    @staticmethod
+    def _form_content_response(content: bytes, done: bool=True) -> dict:
         return {
             'content': content,
             'more_content': not done
         }
 
     def set_cookie(self, cookie: Cookie):
+        """Add a cookie to the list that will be returned in the response"""
         self._cookies[cookie.name] = cookie
 
     def set_content(self, content: Union[str, bytes], encoding: Union[str, bytes]='utf-8'):
+        """Set the response content"""
         if isinstance(content, str):
             self._content = content.encode(encoding)
         else:
@@ -127,6 +136,7 @@ class Response:
         self._charset = encoding
 
     async def stream_to(self, channel, content: bytes, done: bool=False):
+        """Stream the response to an ASGI channel"""
         if self._done:
             raise ResponseError("A full response has already been sent.")
 
@@ -139,6 +149,7 @@ class Response:
             self._done = True
 
     async def send_to(self, channel):
+        """Send the response, in full, to an ASGI channel"""
         if self._headers_sent:
             raise ResponseError("A set of response headers has already been sent.")
 
@@ -152,16 +163,20 @@ class Response:
 
 
 def html_response(content: str, status=200) -> Response:
+    """Wrapper to send an html response"""
     resp = Response()
     resp.status = status
+    resp.content_type = "text/html"
     resp.set_content(content)
 
     return resp
 
 
 def json_response(content: dict, status=200) -> Response:
+    """Wrapper to send a json response"""
     resp = Response()
     resp.status = status
+    resp.content_type = "application/json"
     resp.set_content(json.dumps(content))
 
     return resp
