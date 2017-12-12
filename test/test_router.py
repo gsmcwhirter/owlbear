@@ -160,3 +160,48 @@ def test_middleware():
     test_helpers.run_coroutine(my_router.dispatch(request))
 
     mock_middleware1.assert_called_once()
+
+
+def test_url_for():
+    mock_handler1 = MagicMock()
+    coro_mock_handler1 = test_helpers.make_coroutine(mock_handler1)
+    coro_mock_handler1.__name__ = 'test1'
+
+    mock_handler2 = MagicMock()
+    coro_mock_handler2 = test_helpers.make_coroutine(mock_handler2)
+    coro_mock_handler2.__name__ = 'test2'
+
+    my_router = router.Router()
+    my_router.add_route("/", coro_mock_handler1)
+
+    sub_router = router.Router()
+    sub_router.add_route("/<foo: str>", coro_mock_handler2)
+
+    print("*****")
+    router.print_route_tree(sub_router.tree)
+    print()
+    for item in sub_router.tree.list_handlers():
+        print(item)
+
+    sub_router.tree.reset_prefix("/foo")
+
+    print("*****")
+    router.print_route_tree(my_router.tree)
+    print()
+    for item in my_router.tree.list_handlers():
+        print(item)
+
+    print("*****")
+    router.print_route_tree(sub_router.tree)
+    print()
+    for item in sub_router.tree.list_handlers():
+        print(item)
+
+    my_router.attach(sub_router, "foo")
+    print(my_router.handler_to_url)
+
+    path = my_router.url_for("test1", "GET")
+    assert path == "/"
+
+    path = my_router.url_for("test2", "GET", {"foo": 'testxxx'})
+    assert path == "/foo/testxxx"

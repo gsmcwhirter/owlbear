@@ -3,9 +3,9 @@
 import functools
 import re
 from typing import (
-    Any, Callable, Coroutine, Iterable,
+    Any, Callable, Coroutine, Dict, Iterable,
     List, Mapping, MutableMapping, Optional,
-    Tuple, Union,
+    Set, Tuple, Union,
 )
 
 from owlbear.request import Request
@@ -35,6 +35,16 @@ class ParameterTypeError(Exception):
 
 class ConflictingRoutes(Exception):
     """Represents trying to add a route that is already added"""
+    pass
+
+
+class HandlerNameNotFound(Exception):
+    """Represents trying to lookup the url for a handler and it not being found"""
+    pass
+
+
+class BadHandlerParameters(Exception):
+    """Represents trying to form the path for a handler without the right parameters"""
     pass
 
 
@@ -160,7 +170,7 @@ class RouteTree:
             self.prefix = new_prefix.rstrip("/")
 
         for key, rtree in self.children.items():
-            rtree.reset_prefix(f"{new_prefix}/{key}")
+            rtree.reset_prefix(f"{new_prefix}/{key}".rstrip("/"))
 
     def _add_child(self,
                    key: str,
@@ -183,7 +193,7 @@ class RouteTree:
                     uri_parts: List[str],
                     handler: RequestHandler,
                     methods: Methods=('GET', ),
-                    parent_parameter_names: Optional[List[str]]=None):
+                    parent_parameter_names: Optional[List[str]]=None) -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
         """
 
         Args:
@@ -195,10 +205,12 @@ class RouteTree:
         Returns:
 
         """
+
         if not methods:
             raise ValueError("No route methods were provided.")
 
         if not uri_parts:
+            updates = {}
             for method in methods:
                 method = method.upper()
                 if self.methods.get(method):
@@ -210,6 +222,9 @@ class RouteTree:
                     ))
 
                 self.methods[method] = handler
+                updates[(handler.__name__, method)] = ('', set())
+
+            return updates
 
         else:
             key, *rest = uri_parts
@@ -232,7 +247,20 @@ class RouteTree:
             if star_type != key_route.star_type:
                 raise BadRouteParameter("Route parameter has a conflicting type.")
 
-            key_route.add_handler(rest, handler=handler, methods=methods, parent_parameter_names=parent_parameter_names)
+            updates = key_route.add_handler(rest, handler=handler, methods=methods, parent_parameter_names=parent_parameter_names)
+            for k, (path, req_args) in updates.items():
+                print("!!!!", repr(path), star_name, req_args)
+                if star_name:
+                    req_args.add(star_name)
+                    path = "/{{{}}}{}".format(star_name, path)
+
+                    print("!!!!", req_args)
+                elif key or not path:
+                    path = "/{}{}".format(key, path)
+
+                updates[k] = (path, req_args)
+
+            return updates
 
     def _parse_last_uri_part(self,
                             last_part: str) \
@@ -324,7 +352,7 @@ class RouteTree:
         return handlers
 
     def merge_with(self,
-                   other: 'RouteTree'):
+                   other: 'RouteTree') -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
         """
 
         Args:
@@ -333,14 +361,18 @@ class RouteTree:
         Returns:
 
         """
+        updates = {}
+
         for path, method, handler in other.list_handlers():
             uri_parts = _make_uri_parts(path)
-            self.add_handler(uri_parts, handler, methods=(method, ))
+            updates.update(self.add_handler(uri_parts, handler, methods=(method, )))
+
+        return updates
 
 
 class Router:
     """The programmer-facing router"""
-    __slots__ = ('tree', 'middleware',)
+    __slots__ = ('tree', 'middleware', 'handler_to_url', )
 
     def __init__(self):
         """
@@ -348,6 +380,36 @@ class Router:
         """
         self.tree = RouteTree("")
         self.middleware = []
+        self.handler_to_url = {}
+
+    def url_for(self, handler_name: str, method: str='GET', param_args=None) -> str:
+        """
+
+        Args:
+            handler_name ():
+            method ():
+            param_args ():
+
+        Returns:
+
+        """
+        if param_args is None:
+            param_args = {}
+
+        path, req_params = self.handler_to_url.get((handler_name, method), (None, set()))
+        if not path:
+            raise HandlerNameNotFound("No path was found for handler={}, method={}".format(handler_name, method))
+
+        param_args_keys = set(param_args.keys())
+        missing_params = req_params - param_args_keys
+        if req_params and missing_params:
+            raise BadHandlerParameters("Missing parameter values for: {}".format(", ".join(sorted(missing_params))))
+
+        extra_params = param_args_keys - req_params
+        if extra_params:
+            raise BadHandlerParameters("Extra parameter values for: {}".format(", ".join(sorted(extra_params))))
+
+        return path.format(**param_args)
 
     def register_middleware(self, middleware: Middleware):
         """
@@ -375,7 +437,8 @@ class Router:
 
         """
         uri_parts = _make_uri_parts(uri_path)
-        self.tree.add_handler(uri_parts, handler=handler, methods=methods)
+        handler_to_url_updates = self.tree.add_handler(uri_parts, handler=handler, methods=methods)
+        self.handler_to_url.update(handler_to_url_updates)
 
     def attach(self,
                router: 'Router',
@@ -396,7 +459,8 @@ class Router:
             base_path = ""
 
         router.tree.reset_prefix(base_path)
-        self.tree.merge_with(router.tree)
+        handler_to_url_updates = self.tree.merge_with(router.tree)
+        self.handler_to_url.update(handler_to_url_updates)
 
     def handler_and_args_for(self,
                              uri_path: str,

@@ -32,6 +32,19 @@ class Owlbear:
 
         await response.send_to(channels['reply'])
 
+    def url_for(self, handler_name: str, method: str='GET', param_args: Optional[dict]=None) -> str:
+        """
+
+        Args:
+            handler_name ():
+            method ():
+            param_args ():
+
+        Returns:
+
+        """
+        return self.router.url_for(handler_name=handler_name, method=method, param_args=param_args)
+
     def add_route(self, uri_path: str, handler: RequestHandler, methods: Methods=('GET', )):
         """Add a route handler to the app
 
