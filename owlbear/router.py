@@ -3,20 +3,12 @@
 import functools
 import re
 from typing import (
-    Any, Callable, Coroutine, Dict, Iterable,
+    Any, Callable, Dict,
     List, Mapping, MutableMapping, Optional,
     Set, Tuple, Union,
 )
-
-from owlbear.request import Request
-from owlbear.response import Response
 from owlbear.static import StaticFileHandler
-
-
-Methods = Iterable[str]
-RequestHandler = Callable[[Request], Coroutine[Response, None, Response]]
-WrappedRequestHandler = Callable[[Request], Coroutine[Response, None, Response]]
-Middleware = Callable[[Request, WrappedRequestHandler], Coroutine[Response, None, Response]]
+from owlbear.types import Methods, Middleware, RequestHandler
 
 
 class BadRouteParameter(Exception):
@@ -393,17 +385,18 @@ class Router:
         self.middleware = []
         self.handler_to_url = {}
 
-    def static(self, prefix: str, local_path: str):
+    def static(self, prefix: str, local_path: str, only_files: Optional[List[str]]=None):
         """
 
         Args:
             prefix ():
             local_path ():
+            only_files ():
 
         Returns:
 
         """
-        self.add_route('{}/__static__'.format(prefix), StaticFileHandler(prefix, local_path), methods=('GET', ))
+        self.add_route('{}/__static__'.format(prefix), StaticFileHandler(prefix, local_path, only_files=only_files), methods=('GET', ))
 
     def url_for(self, handler_name: str, method: str='GET', param_args=None) -> str:
         """

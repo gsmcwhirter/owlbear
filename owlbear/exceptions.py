@@ -2,13 +2,10 @@
 """Exception handling functionality (types and example)"""
 import sys
 import traceback
-from typing import Callable, Coroutine, Iterable, Optional, Type, Union
+from typing import  Optional
 
 from owlbear.request import Request
 from owlbear.response import Response
-
-ExceptionHandler = Callable[[Request, Exception], Coroutine[Optional[Response], None, Optional[Response]]]
-ExceptionTypes = Union[Type, Iterable[Type]]
 
 
 async def default_exception_handler(request: Request, e: Exception) -> Optional[Response]:

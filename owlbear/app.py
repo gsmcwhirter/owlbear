@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """The main app server class"""
-from typing import Callable, Optional, Union
+from typing import Callable, List, Optional, Union
 
-from owlbear.exceptions import default_exception_handler, ExceptionHandler, ExceptionTypes
+from owlbear.exceptions import default_exception_handler
 from owlbear.request import Request
-from owlbear.router import Methods, Middleware, RequestHandler, Router
+from owlbear.router import Router
+from owlbear.types import ExceptionHandler, ExceptionTypes, Methods, Middleware, RequestHandler
 
 
 class Owlbear:
@@ -131,14 +132,15 @@ class Owlbear:
         else:
             self.router.attach(app, base_path)
 
-    def static(self, prefix: str, local_dir: str):
+    def static(self, prefix: str, local_dir: str, only_files: Optional[List[str]]=None):
         """
 
         Args:
             prefix ():
             local_dir ():
+            only_files ():
 
         Returns:
 
         """
-        self.router.static(prefix, local_dir)
+        self.router.static(prefix, local_dir, only_files=only_files)
