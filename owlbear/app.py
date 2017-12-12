@@ -130,3 +130,15 @@ class Owlbear:
             self.router.attach(app.router, base_path)
         else:
             self.router.attach(app, base_path)
+
+    def static(self, prefix: str, local_dir: str):
+        """
+
+        Args:
+            prefix ():
+            local_dir ():
+
+        Returns:
+
+        """
+        self.router.static(prefix, local_dir)
