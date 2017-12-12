@@ -126,7 +126,7 @@ class Response:
         """Add a cookie to the list that will be returned in the response"""
         self._cookies[cookie.name] = cookie
 
-    def set_content(self, content: Union[str, bytes], encoding: Union[str, bytes]='utf-8'):
+    def set_content(self, content: Union[str, bytes], encoding: Optional[Union[str, bytes]]='utf-8'):
         """Set the response content"""
         if isinstance(content, str):
             self._content = content.encode(encoding)

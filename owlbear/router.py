@@ -10,6 +10,7 @@ from typing import (
 
 from owlbear.request import Request
 from owlbear.response import Response
+from owlbear.static import StaticFileHandler
 
 
 Methods = Iterable[str]
@@ -193,7 +194,9 @@ class RouteTree:
                     uri_parts: List[str],
                     handler: RequestHandler,
                     methods: Methods=('GET', ),
-                    parent_parameter_names: Optional[List[str]]=None) -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
+                    parent_parameter_names: Optional[List[str]]=None,
+                    allow_stars: bool=True) \
+            -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
         """
 
         Args:
@@ -201,6 +204,7 @@ class RouteTree:
             handler ():
             methods ():
             parent_parameter_names ():
+            allow_stars ():
 
         Returns:
 
@@ -234,6 +238,9 @@ class RouteTree:
 
             star_name, star_type = _get_star_attrs(key, parent_parameter_names)
 
+            if star_name and not allow_stars:
+                raise BadRouteParameter("Parameterized routes are not allowed.")
+
             if star_name:
                 key = '*'
 
@@ -247,14 +254,11 @@ class RouteTree:
             if star_type != key_route.star_type:
                 raise BadRouteParameter("Route parameter has a conflicting type.")
 
-            updates = key_route.add_handler(rest, handler=handler, methods=methods, parent_parameter_names=parent_parameter_names)
+            updates = key_route.add_handler(rest, handler=handler, methods=methods, parent_parameter_names=parent_parameter_names, allow_stars=allow_stars)
             for k, (path, req_args) in updates.items():
-                print("!!!!", repr(path), star_name, req_args)
                 if star_name:
                     req_args.add(star_name)
                     path = "/{{{}}}{}".format(star_name, path)
-
-                    print("!!!!", req_args)
                 elif key or not path:
                     path = "/{}{}".format(key, path)
 
@@ -321,6 +325,12 @@ class RouteTree:
             except RouteNotFound:  # pragma: no cover
                 pass
 
+        if '__static__' in self.children:
+            try:
+                return self.children['__static__'].get_handler_and_args([], method='GET', handler_args=None)
+            except RouteNotFound:  # pragma: no cover
+                pass
+
         raise RouteNotFound(f"Could not find route for '{self.prefix.rstrip('/')}/{key}'")
 
     def list_handlers(self, prefix: str=None) -> List[Tuple[str, str, RequestHandler]]:
@@ -352,7 +362,8 @@ class RouteTree:
         return handlers
 
     def merge_with(self,
-                   other: 'RouteTree') -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
+                   other: 'RouteTree') \
+            -> Dict[Tuple[str, str], Tuple[str, Set[str]]]:
         """
 
         Args:
@@ -381,6 +392,18 @@ class Router:
         self.tree = RouteTree("")
         self.middleware = []
         self.handler_to_url = {}
+
+    def static(self, prefix: str, local_path: str):
+        """
+
+        Args:
+            prefix ():
+            local_path ():
+
+        Returns:
+
+        """
+        self.add_route('{}/__static__'.format(prefix), StaticFileHandler(prefix, local_path), methods=('GET', ))
 
     def url_for(self, handler_name: str, method: str='GET', param_args=None) -> str:
         """
