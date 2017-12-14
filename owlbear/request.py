@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Classes wrapping ASGI requests in a nicer interface"""
 
+import urllib.parse
+
 class RequestData:
     """Simple object container for attaching data to a request"""
     pass
@@ -9,7 +11,7 @@ class RequestData:
 class Request:
     """Class to wrap an ASGI request"""
 
-    __slots__ = ('app', 'raw_request', 'data', '_headers', '_body', '_body_channel', )
+    __slots__ = ('app', 'raw_request', 'data', '_headers', '_body', '_body_channel', '_query_args', '_form_values' )
 
     def __init__(self, app: 'owlbear.app.Owlbear', raw_request: dict, body_channel=None):
         self.app = app
@@ -18,6 +20,8 @@ class Request:
         self._headers: dict = None
         self._body_channel = body_channel
         self._body = None
+        self._query_args = None
+        self._form_values = None
 
     def __str__(self):
         return f"{self.method} {self.path}"
@@ -31,6 +35,23 @@ class Request:
     def query_string(self) -> str:
         """Return the request query string"""
         return self.raw_request.get('query_string')
+
+    @property
+    def query_args(self) -> dict:
+        """Return the parsed query string args"""
+        if self._query_args is None:
+            if self.query_string is not None:
+                self._query_args = urllib.parse.parse_qs(self.query_string, keep_blank_values=True)
+            else:
+                self._query_args = {}
+
+        return self._query_args
+
+    @property
+    def form(self) -> dict:
+        """Return the parsed form data, if any"""
+        # TODO
+        return {}
 
     @property
     def host(self) -> str:
