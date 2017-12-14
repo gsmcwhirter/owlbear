@@ -2,7 +2,7 @@
 """Classes to handle composing and sending an ASGI response"""
 from collections import defaultdict
 from datetime import datetime
-from typing import NamedTuple, Optional, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 try:
     import ujson as json
@@ -173,37 +173,61 @@ class Response:
         await channel.send(resp)
 
 
-def text_response(content: str, status=200) -> Response:
+def text_response(content: str, status: int=200, headers: Optional[Union[Dict[str, str], List[Tuple[str, str]]]]=None) -> Response:
     """Wrapper to send a text response"""
     resp = Response()
     resp.status = status
     resp.content_type = "text/plain"
     resp.set_content(content)
 
+    if headers:
+        if isinstance(headers, dict):
+            for hname, hval in headers.items():
+                resp.add_header(hname, hval)
+        else:
+            for hname, hval in headers:
+                resp.add_header(hname, hval)
+
     return resp
 
 
-def html_response(content: str, status=200) -> Response:
+def html_response(content: str, status: int=200, headers: Optional[Union[Dict[str, str], List[Tuple[str, str]]]]=None) -> Response:
     """Wrapper to send an html response"""
     resp = Response()
     resp.status = status
     resp.content_type = "text/html"
     resp.set_content(content)
 
+    if headers:
+        if isinstance(headers, dict):
+            for hname, hval in headers.items():
+                resp.add_header(hname, hval)
+        else:
+            for hname, hval in headers:
+                resp.add_header(hname, hval)
+
     return resp
 
 
-def json_response(content: dict, status=200) -> Response:
+def json_response(content: dict, status: int=200, headers: Optional[Union[Dict[str, str], List[Tuple[str, str]]]]=None) -> Response:
     """Wrapper to send a json response"""
     resp = Response()
     resp.status = status
     resp.content_type = "application/json"
     resp.set_content(json.dumps(content))
 
+    if headers:
+        if isinstance(headers, dict):
+            for hname, hval in headers.items():
+                resp.add_header(hname, hval)
+        else:
+            for hname, hval in headers:
+                resp.add_header(hname, hval)
+
     return resp
 
 
-def redirect_response(location: str, permanent: bool=False) -> Response:
+def redirect_response(location: str, permanent: bool=False, headers: Optional[Union[Dict[str, str], List[Tuple[str, str]]]]=None) -> Response:
     """Issue a redirect to a new url"""
 
     resp = Response()
@@ -214,5 +238,13 @@ def redirect_response(location: str, permanent: bool=False) -> Response:
 
     resp.set_content("Moved to {}".format(location))
     resp.add_header("location", location)
+
+    if headers:
+        if isinstance(headers, dict):
+            for hname, hval in headers.items():
+                resp.add_header(hname, hval)
+        else:
+            for hname, hval in headers:
+                resp.add_header(hname, hval)
 
     return resp
