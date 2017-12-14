@@ -28,6 +28,11 @@ class Request:
         return self.raw_request.get('path')
 
     @property
+    def query_string(self) -> str:
+        """Return the request query string"""
+        return self.raw_request.get('query_string')
+
+    @property
     def host(self) -> str:
         """Return the request host"""
         return self.headers.get('host')

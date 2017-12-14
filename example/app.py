@@ -5,8 +5,8 @@ import time
 
 from owlbear.app import Owlbear
 from owlbear.request import Request
-from owlbear.router import WrappedRequestHandler
 from owlbear.response import json_response, Response
+from owlbear.types import WrappedRequestHandler
 
 
 class MyApp(Owlbear):
@@ -42,5 +42,7 @@ async def example_middleware(request: Request,
 @app.route("/", methods=("GET", ))
 async def hello(request):
     return json_response({
-        'message': "Hello, world! \u263a"
+        'message': "Hello, world! \u263a",
+        'path': request.path,
+        'raw_request': format(request.raw_request),
     })
