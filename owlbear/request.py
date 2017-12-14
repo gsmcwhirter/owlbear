@@ -28,6 +28,11 @@ class Request:
         return self.raw_request.get('path')
 
     @property
+    def host(self) -> str:
+        """Return the request host"""
+        return self.headers.get('host')
+
+    @property
     def scheme(self) -> str:
         """Return the request scheme"""
         return self.raw_request.get('scheme')
@@ -43,7 +48,7 @@ class Request:
         if self._headers is None:
             self._headers = {}
             for header_name, header_val in self.raw_request.get('headers', []):
-                header_name = header_name.decode('ascii')
+                header_name = header_name.decode('ascii').lower()
                 header_val = header_val.decode('ascii')
                 self._headers[header_name] = header_val
 
