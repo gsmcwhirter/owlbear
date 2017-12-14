@@ -201,3 +201,18 @@ def json_response(content: dict, status=200) -> Response:
     resp.set_content(json.dumps(content))
 
     return resp
+
+
+def redirect_response(location: str, permanent: bool=False) -> Response:
+    """Issue a redirect to a new url"""
+
+    resp = Response()
+    if permanent:
+        resp.status = 301
+    else:
+        resp.status = 302
+
+    resp.set_content("Moved to {}".format(location))
+    resp.add_header("location", location)
+
+    return resp
