@@ -135,6 +135,17 @@ class Response:
 
         self._charset = encoding
 
+    def add_header(self, header_name: str, header_val: str):
+        """Add a header to the response"""
+        self._headers[header_name.lower()].append(header_val)
+
+    def clear_headers(self, header_name: Optional[str]):
+        """Clear one or all headers"""
+        if header_name is not None:
+            self._headers[header_name.lower()] = []
+        else:
+            self._headers = defaultdict(list)
+
     async def stream_to(self, channel, content: bytes, done: bool=False):
         """Stream the response to an ASGI channel"""
         if self._done:
