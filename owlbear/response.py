@@ -173,6 +173,16 @@ class Response:
         await channel.send(resp)
 
 
+def text_response(content: str, status=200) -> Response:
+    """Wrapper to send a text response"""
+    resp = Response()
+    resp.status = status
+    resp.content_type = "text/plain"
+    resp.set_content(content)
+
+    return resp
+
+
 def html_response(content: str, status=200) -> Response:
     """Wrapper to send an html response"""
     resp = Response()
