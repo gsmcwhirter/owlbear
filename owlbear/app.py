@@ -21,6 +21,7 @@ class Owlbear:
 
         try:
             response = await self.router.dispatch(request)
+            await response.send_to(channels['reply'])
         except Exception as e:
             for exception_types, handler in reversed(self.exception_handlers):
                 if isinstance(e, exception_types):
@@ -31,7 +32,7 @@ class Owlbear:
             else:
                 response = await default_exception_handler(request, e)
 
-        await response.send_to(channels['reply'])
+            await response.send_to(channels['reply'])
 
     def url_for(self, handler_name: str, method: str='GET', param_args: Optional[dict]=None) -> str:
         """
