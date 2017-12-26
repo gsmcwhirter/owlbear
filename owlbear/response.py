@@ -116,7 +116,8 @@ class Response:
 
     def set_content(self, content: Union[str, bytes], encoding: Optional[Union[str, bytes]]='utf-8'):
         """Set the response content"""
-        if isinstance(content, str):
+
+        if not isinstance(content, bytes):
             self._content = content.encode(encoding)
         else:
             self._content = content
