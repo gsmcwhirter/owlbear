@@ -2,6 +2,7 @@
 """Classes to handle composing and sending an ASGI response"""
 from collections import defaultdict
 from datetime import datetime
+import http.cookies
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 try:
@@ -20,43 +21,22 @@ class Cookie(NamedTuple):
     path: Optional[str] = "/"
     secure: bool = True
     http_only: bool = True
-    same_site: Optional[str] = "Strict"
+    same_site: Optional[str] = "Strict"  # TODO: support this
 
-    def formatted(self) -> str:
-        """Return a properly formatted cookie string"""
-        extras = []
-        if self.expires is not None:
-            extras.append("Expires={}")
-
-        if self.max_age is not None:
-            extras.append("Max-Age={}".format(self.max_age))
-
-        if self.domain is not None:
-            extras.append("Domain={}".format(self.domain))
-
-        if self.path is not None:
-            extras.append("Path={}".format(self.path))
-
+    def load_into_parser(self, cookie_parser: http.cookies.BaseCookie):
+        cookie_parser[self.name] = self.value
+        if self.expires:
+            cookie_parser[self.name]['expires'] = self.expires.strftime("%a, %d-%b-%Y %H:%M:%S %Z")
+        if self.path:
+            cookie_parser[self.name]['path'] = self.path
+        if self.domain:
+            cookie_parser[self.name]['domain'] = self.domain
+        if self.max_age:
+            cookie_parser[self.name]['max-age'] = self.max_age
         if self.secure:
-            extras.append("Secure")
-
+            cookie_parser[self.name]['secure'] = self.secure
         if self.http_only:
-            extras.append("HttpOnly")
-
-        if self.same_site is not None:
-            extras.append("SameSite={}".format(self.same_site))
-
-        extras_str = ""
-        if extras:
-            extras_str = "; {}".format("; ".join(extras))
-
-        formatted = "{name}={value}{extras}".format(
-            name=self.name,
-            value=self.value,
-            extras=extras_str,
-        )
-
-        return formatted
+            cookie_parser[self.name]['httponly'] = self.http_only
 
 
 class ResponseError(Exception):
@@ -102,8 +82,16 @@ class Response:
 
                 headers.append((header_name, header_val))
 
-        for cookie in self._cookies:
-            headers.append((b'set-cookie', self._encode_if_necessary(cookie.formatted(), 'ascii')))
+        cookie_parser = http.cookies.SimpleCookie()
+        for cookie_name, cookie in self._cookies.items():
+            cookie.load_into_parser(cookie_parser)
+
+        for cookie_name, morsel in cookie_parser.items():
+            cookie_val = morsel.coded_value
+            if self._cookies[cookie_name].same_site is not None:
+                cookie_val += "; SameSite={}".format(self._cookies[cookie_name].same_site)
+
+            headers.append((b'set-cookie', cookie_val))
 
         content_type_val = self._encode_if_necessary(self.content_type)
         if self._charset:

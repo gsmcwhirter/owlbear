@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Classes wrapping ASGI requests in a nicer interface"""
 
+import http.cookies
 import urllib.parse
 
 class RequestData:
@@ -11,7 +12,7 @@ class RequestData:
 class Request:
     """Class to wrap an ASGI request"""
 
-    __slots__ = ('app', 'raw_request', 'data', '_headers', '_body', '_body_channel', '_query_args', '_form_values' )
+    __slots__ = ('app', 'raw_request', 'data', '_headers', '_body', '_body_channel', '_query_args', '_form_values', '_cookies', )
 
     def __init__(self, app: 'owlbear.app.Owlbear', raw_request: dict, body_channel=None):
         self.app = app
@@ -22,6 +23,7 @@ class Request:
         self._body = None
         self._query_args = None
         self._form_values = None
+        self._cookies = None
 
     def __str__(self):
         return f"{self.method} {self.path}"
@@ -46,6 +48,19 @@ class Request:
                 self._query_args = {}
 
         return self._query_args
+
+    @property
+    def cookies(self) -> dict:
+        """Return cookie values"""
+        if self._cookies is None:
+            self._cookies = {}
+            cookie_header = self.headers.get('cookie')
+            if cookie_header:
+                cookie_parser = http.cookies.SimpleCookie(cookie_header)
+                for key, morsel in cookie_parser.items():
+                    self._cookies[key] = morsel.value
+
+        return self._cookies
 
     @property
     def form(self) -> dict:
