@@ -13,6 +13,8 @@ from owlbear.types import RequestHandler
 
 class StaticFileHandler:
 
+    __name__ = 'StaticFileHandler'
+
     def __init__(self, prefix: str, local_path: str, only_files: Optional[List[str]]=None, handler_404: Optional[RequestHandler]=None):
         self._prefix = prefix
         self._local_path = os.path.abspath(local_path)
