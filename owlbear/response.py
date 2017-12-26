@@ -91,7 +91,7 @@ class Response:
             if self._cookies[cookie_name].same_site is not None:
                 cookie_val += "; SameSite={}".format(self._cookies[cookie_name].same_site)
 
-            headers.append((b'set-cookie', cookie_val))
+            headers.append((b'set-cookie', self._encode_if_necessary(cookie_val)))
 
         content_type_val = self._encode_if_necessary(self.content_type)
         if self._charset:
