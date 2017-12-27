@@ -17,8 +17,12 @@ class StaticFileHandler:
         self.__name__ = 'StaticFileHandler'
         self._prefix = prefix
         self._local_path = os.path.abspath(local_path)
-        self._only_files = set(only_files or [])
         self._handler_404 = handler_404 or self._default_404
+
+        if only_files is None:
+            self._only_files = None
+        else:
+            self._only_files = set(only_files or [])
 
     @staticmethod
     async def _default_404(request):
@@ -38,7 +42,7 @@ class StaticFileHandler:
         _, resolved_relpath = local_path.split(self._local_path, 1)
         resolved_relpath.lstrip("/")
 
-        if not resolved_relpath in self._only_files:
+        if self._only_files is not None and resolved_relpath not in self._only_files:
             return await self._handler_404(request)
 
         resp = owlbear.response.Response()
