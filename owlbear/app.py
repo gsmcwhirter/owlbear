@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """The main app server class"""
+import logging
+import pprint
 from typing import Callable, List, Optional, Union
 
 from owlbear.exceptions import default_exception_handler
+from owlbear.logging import setup_logger
 from owlbear.request import Request
 from owlbear.router import Router
 from owlbear.types import ExceptionHandler, ExceptionTypes, Methods, Middleware, RequestHandler
@@ -11,16 +14,19 @@ from owlbear.types import ExceptionHandler, ExceptionTypes, Methods, Middleware,
 class Owlbear:
     """The main app server class"""
 
-    def __init__(self):
-        self.router = Router()
+    def __init__(self, *, logger: Optional[logging.Logger]=None):
+        self.logger = logger or setup_logger("owlbear")
+        self.router = Router(logger=logger)
         self.exception_handlers = []
 
     async def __call__(self, message, channels):
         """The uvicorn interface"""
         request = Request(self, message, channels.get('body'))
+        self.logger.debug("Request", raw_data=pprint.pformat(request.raw_request))
 
         try:
             response = await self.router.dispatch(request)
+            self.logger.debug("Response", raw_data=pprint.pformat(response._form_full_response()))
             await response.send_to(channels['reply'])
         except Exception as e:
             for exception_types, handler in reversed(self.exception_handlers):
@@ -32,6 +38,7 @@ class Owlbear:
             else:
                 response = await default_exception_handler(request, e)
 
+            self.logger.debug("Response", raw_data=pprint.pformat(response._form_full_response()))
             await response.send_to(channels['reply'])
 
     def url_for(self, handler_name: str, method: str='GET', param_args: Optional[dict]=None) -> str:

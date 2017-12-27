@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Classes to handle request routing"""
 import functools
+import logging
 import re
 from typing import (
     Any, Callable, Dict,
     List, Mapping, MutableMapping, Optional,
     Set, Tuple, Union,
 )
+
+from owlbear.logging import setup_logger
 from owlbear.static import StaticFileHandler
 from owlbear.types import Methods, Middleware, RequestHandler
 
@@ -123,12 +126,13 @@ class RouteTree:
     children: MutableMapping[str, 'RouteTree']
     methods: MutableMapping[str, RequestHandler]
 
-    __slots__ = ('prefix', 'children', 'methods', 'star_name', 'star_type',)
+    __slots__ = ('prefix', 'children', 'methods', 'star_name', 'star_type', 'logger', )
 
     def __init__(self,
                  prefix: str,
                  star_name: Optional[str]=None,
-                 star_type: Optional[str]=None):
+                 star_type: Optional[str]=None,
+                 *, logger: Optional[logging.Logger]=None):
         """
 
         Args:
@@ -136,6 +140,8 @@ class RouteTree:
             star_name ():
             star_type ():
         """
+        self.logger = logger or setup_logger("owlbear.routetree")
+
         self.prefix = prefix
         self.children = {}
         self.methods = {}
@@ -159,6 +165,8 @@ class RouteTree:
         Returns:
 
         """
+        self.logger.debug("Resetting prefix", old_prefix=self.prefix, new_prefix=new_prefix)
+
         if self.prefix != "":
             self.prefix = new_prefix.rstrip("/")
 
@@ -179,8 +187,10 @@ class RouteTree:
         Returns:
 
         """
+        self.logger.debug("Adding child", key=key, star_name=star_name, star_type=star_type)
+
         child_prefix = f"{self.prefix.rstrip('/')}/{key}"
-        self.children[key] = RouteTree(child_prefix, star_name=star_name, star_type=star_type)
+        self.children[key] = RouteTree(child_prefix, star_name=star_name, star_type=star_type, logger=self.logger)
 
     def add_handler(self,
                     uri_parts: List[str],
@@ -201,6 +211,8 @@ class RouteTree:
         Returns:
 
         """
+
+        self.logger.debug("Adding handler", uri_parts=uri_parts, handler=handler, methods=methods, parent_parameter_names=parent_parameter_names, allow_stars=allow_stars)
 
         if not methods:
             raise ValueError("No route methods were provided.")
@@ -292,6 +304,8 @@ class RouteTree:
         Returns:
 
         """
+        self.logger.debug("Finding handler and args for", uri_parts=uri_parts, method=method, handler_args=handler_args)
+
         if handler_args is None:
             handler_args = {}
 
@@ -375,13 +389,14 @@ class RouteTree:
 
 class Router:
     """The programmer-facing router"""
-    __slots__ = ('tree', 'middleware', 'handler_to_url', )
+    __slots__ = ('tree', 'middleware', 'handler_to_url', 'logger', )
 
-    def __init__(self):
+    def __init__(self, *, logger: Optional[logging.Logger]=None):
         """
 
         """
-        self.tree = RouteTree("")
+        self.logger = logger or setup_logger("owlbear.router")
+        self.tree = RouteTree("", logger=self.logger)
         self.middleware = []
         self.handler_to_url = {}
 
@@ -396,7 +411,8 @@ class Router:
         Returns:
 
         """
-        self.add_route('{}/__static__'.format(prefix), StaticFileHandler(prefix, local_path, only_files=only_files), methods=('GET', ))
+        self.logger.debug("Serving static files", prefix=prefix, local_path=local_path, only_files=only_files)
+        self.add_route('{}/__static__'.format(prefix), StaticFileHandler(prefix, local_path, only_files=only_files, logger=self.logger), methods=('GET', ))
 
     def url_for(self, handler_name: str, method: str='GET', param_args=None) -> str:
         """
@@ -436,7 +452,7 @@ class Router:
         Returns:
 
         """
-        self.middleware.append(middleware)
+        self.middleware.insert(0, middleware)
 
     def add_route(self,
                   uri_path: str,

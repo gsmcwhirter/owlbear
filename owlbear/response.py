@@ -47,7 +47,7 @@ class ResponseError(Exception):
 class Response:
     """Interface to compose and send an ASGI response"""
 
-    __slots__ = ('_headers', '_content', 'status', '_cookies', 'content_type', '_charset', '_headers_sent', '_done', )
+    __slots__ = ('_headers', '_content', 'status', '_cookies', 'content_type', '_charset', '_headers_sent', '_done', "_full_response", )
 
     def __init__(self):
         self.status = 200
@@ -58,6 +58,7 @@ class Response:
         self._charset = None
         self._headers_sent = False
         self._done = False
+        self._full_response = None
 
     @staticmethod
     def _encode_if_necessary(str_or_bytes: Union[str, bytes], encoding: str='ascii') -> bytes:
@@ -67,10 +68,13 @@ class Response:
             return str_or_bytes.encode(encoding)
 
     def _form_full_response(self) -> dict:
-        resp = self._form_header_response()
-        resp.update(self._form_content_response(self._content), done=True)
+        if self._full_response is None:
+            resp = self._form_header_response()
+            resp.update(self._form_content_response(self._content), done=True)
 
-        return resp
+            self._full_response = resp
+
+        return self._full_response
 
     def _form_header_response(self):
         headers = []
@@ -87,7 +91,7 @@ class Response:
             cookie.load_into_parser(cookie_parser)
 
         for cookie_name, morsel in cookie_parser.items():
-            cookie_val = morsel.coded_value
+            cookie_val = morsel.OutputString()
             if self._cookies[cookie_name].same_site is not None:
                 cookie_val += "; SameSite={}".format(self._cookies[cookie_name].same_site)
 

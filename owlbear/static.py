@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """Static file handling"""
 
+import logging
 import mimetypes
 import os
 from typing import List, Optional
 
 import aiofiles
 
+from owlbear.logging import setup_logger
 import owlbear.request
 import owlbear.response
 from owlbear.types import RequestHandler
@@ -34,11 +36,18 @@ mimetypes.add_type("application/font-sfnt", "sfnt", strict=False)
 
 class StaticFileHandler:
 
-    def __init__(self, prefix: str, local_path: str, only_files: Optional[List[str]]=None, handler_404: Optional[RequestHandler]=None):
+    def __init__(self,
+                 prefix: str,
+                 local_path: str,
+                 only_files: Optional[List[str]]=None,
+                 handler_404: Optional[RequestHandler]=None,
+                 *, logger: Optional[logging.Logger]=None):
         self.__name__ = 'StaticFileHandler'
         self._prefix = prefix
         self._local_path = os.path.abspath(local_path)
         self._handler_404 = handler_404 or self._default_404
+
+        self.logger = logger or setup_logger("owlbear.staticfilehandler")
 
         if only_files is None:
             self._only_files = None
@@ -54,16 +63,21 @@ class StaticFileHandler:
         local_relpath = local_relpath.lstrip("/")
         local_path = os.path.abspath(os.path.join(self._local_path, local_relpath))
 
+        self.logger.debug("Finding static file", prefix=self._prefix, request_path=request.path, local_relpath=local_relpath, local_path=local_path)
+
         if not local_path.startswith(self._local_path):
+            self.logger.debug("Static file '{}' requested outside of static directory".format(local_path))
             raise ValueError("Static file '{}' requested outside of static directory".format(local_path))
 
         if not os.path.exists(local_path):
+            self.logger.debug("Static file '{}' does not exist".format(local_path))
             return await self._handler_404(request)
 
         _, resolved_relpath = local_path.split(self._local_path, 1)
         resolved_relpath.lstrip("/")
 
         if self._only_files is not None and resolved_relpath not in self._only_files:
+            self.logger.debug("Static file '{}' is not in the only_files list".format(local_path), only_files=self._only_files)
             return await self._handler_404(request)
 
         resp = owlbear.response.Response()
@@ -75,5 +89,7 @@ class StaticFileHandler:
             resp.content_type = guess[0] or "application/octet-stream"
         else:
             resp.content_type = "application/octet-stream"
+
+        self.logger.debug("Static file '{}' found".format(local_path), content_type=resp.content_type)
 
         return resp
