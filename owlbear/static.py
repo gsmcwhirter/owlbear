@@ -53,8 +53,10 @@ class StaticFileHandler:
         async with aiofiles.open(local_path, 'rb') as f:
             resp.set_content(await f.read(), encoding=None)
 
-        guess = mimetypes.guess_type(local_path)
+        guess = mimetypes.guess_type(local_path, strict=False)
         if guess is not None:
             resp.content_type = guess[0]
+        else:
+            resp.content_type = "application/octet-stream"
 
         return resp
