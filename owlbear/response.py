@@ -26,7 +26,7 @@ class Cookie(NamedTuple):
     def load_into_parser(self, cookie_parser: http.cookies.BaseCookie):
         cookie_parser[self.name] = self.value
         if self.expires:
-            cookie_parser[self.name]['expires'] = self.expires.strftime("%a, %d-%b-%Y %H:%M:%S GMT")
+            cookie_parser[self.name]['expires'] = self.expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
         if self.path:
             cookie_parser[self.name]['path'] = self.path
         if self.domain:
