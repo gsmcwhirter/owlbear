@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='owlbear',
-    version='0.2.14',
+    version='0.2.15',
     packages=['owlbear'],
     url="https://github.com/gsmcwhirter/owlbear",
     author="Gregory McWhirter",

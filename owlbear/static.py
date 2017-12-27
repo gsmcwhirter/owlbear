@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Static file handling"""
 
+import mimetypes
 import os
 from typing import List, Optional
 
@@ -9,6 +10,9 @@ import aiofiles
 import owlbear.request
 import owlbear.response
 from owlbear.types import RequestHandler
+
+
+mimetypes.init()
 
 
 class StaticFileHandler:
@@ -48,5 +52,9 @@ class StaticFileHandler:
         resp = owlbear.response.Response()
         async with aiofiles.open(local_path, 'rb') as f:
             resp.set_content(await f.read(), encoding=None)
+
+        guess = mimetypes.guess_type(local_path)
+        if guess is not None:
+            resp.content_type = guess[0]
 
         return resp
