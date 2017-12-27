@@ -31,12 +31,12 @@ class Request:
     @property
     def path(self) -> str:
         """Return the request uri_path"""
-        return self.raw_request.get('path')
+        return self.raw_request.get('path').decode()
 
     @property
     def query_string(self) -> str:
         """Return the request query string"""
-        return self.raw_request.get('query_string')
+        return self.raw_request.get('query_string').decode()
 
     @property
     def query_args(self) -> dict:
@@ -76,12 +76,12 @@ class Request:
     @property
     def scheme(self) -> str:
         """Return the request scheme"""
-        return self.raw_request.get('scheme')
+        return self.raw_request.get('scheme').decode()
 
     @property
     def method(self) -> str:
         """Return the request verb"""
-        return self.raw_request.get('method').upper()
+        return self.raw_request.get('method').decode().upper()
 
     @property
     def headers(self) -> dict:
