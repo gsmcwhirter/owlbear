@@ -31,7 +31,7 @@ class Request:
     @property
     def path(self) -> str:
         """Return the request uri_path"""
-        return self.raw_request.get('path').decode()
+        return self.raw_request.get('path')
 
     @property
     def query_string(self) -> str:
@@ -46,6 +46,13 @@ class Request:
                 self._query_args = urllib.parse.parse_qs(self.query_string, keep_blank_values=True)
             else:
                 self._query_args = {}
+
+            for key in self._query_args.keys():
+                if not key.endswith("[]"):
+                    if len(self._query_args[key]) == 1:
+                        self._query_args[key] = self._query_args[key][0]
+                    elif len(self._query_args[key]) == 0:
+                        self._query_args[key] = ''
 
         return self._query_args
 
@@ -76,12 +83,12 @@ class Request:
     @property
     def scheme(self) -> str:
         """Return the request scheme"""
-        return self.raw_request.get('scheme').decode()
+        return self.raw_request.get('scheme')
 
     @property
     def method(self) -> str:
         """Return the request verb"""
-        return self.raw_request.get('method').decode().upper()
+        return self.raw_request.get('method').upper()
 
     @property
     def headers(self) -> dict:
