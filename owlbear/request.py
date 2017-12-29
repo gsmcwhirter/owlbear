@@ -62,13 +62,14 @@ class Request:
         """Return the request query string"""
         return self.raw_request.get('query_string').decode()
 
-    def _fix_query_args(self, query_args):
+    @staticmethod
+    def _fix_query_args(query_args):
         for key in query_args.keys():
             if not key.endswith("[]"):
-                if len(self._query_args[key]) == 1:
-                    self._query_args[key] = self._query_args[key][0]
-                elif len(self._query_args[key]) == 0:
-                    self._query_args[key] = ''
+                if len(query_args[key]) == 1:
+                    query_args[key] = query_args[key][0]
+                elif len(query_args[key]) == 0:
+                    query_args[key] = ''
 
     @property
     def query_args(self) -> dict:
@@ -96,7 +97,8 @@ class Request:
 
         return self._cookies
 
-    def _header_unquote(self, val, filename=False):
+    @staticmethod
+    def _header_unquote(val, filename=False):
         if val[0] == val[-1] == '"':
             val = val[1:-1]
             if val[1:3] == ':\\' or val[:2] == '\\\\':
@@ -105,7 +107,8 @@ class Request:
 
         return val
 
-    def _parse_options_header(self, header: str, options=None) -> Tuple[str, dict]:
+    @classmethod
+    def _parse_options_header(cls, header: str, options=None) -> Tuple[str, dict]:
         if ';' not in header:
             return header.lower().strip(), {}
 
@@ -114,7 +117,7 @@ class Request:
 
         for match in _re_option.finditer(tail):
             key = match.group(1).lower()
-            value = self._header_unquote(match.group(2), key=='filename')
+            value = cls._header_unquote(match.group(2), key=='filename')
             options[key] = value
 
         return ctype, options
